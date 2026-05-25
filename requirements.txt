@@ -1,0 +1,10 @@
+streamlit>=1.32
+yfinance>=0.2.40
+pandas>=2.1
+numpy>=1.26
+scipy>=1.11
+PyPortfolioOpt>=1.5.5
+pandas-datareader>=0.10
+plotly>=5.20
+statsmodels>=0.14
+python-dateutil>=2.8
