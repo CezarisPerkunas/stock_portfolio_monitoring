@@ -55,16 +55,30 @@ def efficient_frontier(prices: pd.DataFrame, points: int = 25,
 
     mu = expected_returns.mean_historical_return(prices, frequency=TRADING_DAYS)
     S = risk_models.sample_cov(prices, frequency=TRADING_DAYS)
-    lo, hi = float(mu.min()), float(mu.max())
-    targets = np.linspace(lo + 1e-6, hi - 1e-6, points)
+
+    # Lower bound: return of the min-variance portfolio (always feasible for long-only).
+    # Upper bound: max single-asset expected return (the "100% best asset" portfolio).
+    try:
+        ef_lo = EfficientFrontier(mu, S, weight_bounds=(0, 1))
+        ef_lo.min_volatility()
+        lo = float(ef_lo.portfolio_performance()[0])
+    except Exception:
+        lo = float(mu.min())
+    hi = float(mu.max())
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        return pd.DataFrame()
+
+    # Shrink endpoints slightly to avoid boundary infeasibility.
+    span = hi - lo
+    targets = np.linspace(lo + 1e-4 * span, hi - 1e-4 * span, max(2, int(points)))
     rows = []
     for t in targets:
         try:
             ef = EfficientFrontier(mu, S, weight_bounds=(0, 1))
             ef.efficient_return(target_return=float(t))
             perf = ef.portfolio_performance(risk_free_rate=rf_annual)
-            rows.append({"target_return": t, "expected_return": perf[0],
-                         "volatility": perf[1], "sharpe": perf[2]})
+            rows.append({"target_return": float(t), "expected_return": float(perf[0]),
+                         "volatility": float(perf[1]), "sharpe": float(perf[2])})
         except Exception:
             continue
     return pd.DataFrame(rows)
